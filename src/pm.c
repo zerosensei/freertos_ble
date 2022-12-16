@@ -144,9 +144,9 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
         PFIC_EnableAllIRQ();
 
         if (xModifiableIdleTime > 0) {
-            LowPower_Idle();
-            // LowPower_Sleep(RB_PWR_RAM2K | RB_PWR_RAM30K | RB_PWR_EXTEND);
-            // HSECFG_Current(HSE_RCur_100);
+            // LowPower_Idle();
+            LowPower_Sleep(RB_PWR_RAM2K | RB_PWR_RAM30K | RB_PWR_EXTEND);
+            HSECFG_Current(HSE_RCur_100);
         }
 
         configPOST_SLEEP_PROCESSING(xExpectedIdleTime);
