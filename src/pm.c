@@ -112,7 +112,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         /* FreeRTOS is in idle, but TMOS is about to start work, 
          * determine whether the minimum sleep time of TMOS is met */
-        if (expected_rtc_trig <= (curr_rtc_count + WAKE_UP_RTC_MAX_TIME)) {
+        if (expected_rtc_trig <= (curr_rtc_count + WAKE_UP_RTC_MAX_TIME + US_TO_RTC(100))) {
             /* Reset the reload register to the value required for normal tick
              * periods. */
             SysTick->CMP = ulTimerCountsForOneTick - 1UL;
@@ -144,8 +144,9 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
         PFIC_EnableAllIRQ();
 
         if (xModifiableIdleTime > 0) {
-            LowPower_Sleep(RB_PWR_RAM2K | RB_PWR_RAM30K | RB_PWR_EXTEND);
-            HSECFG_Current(HSE_RCur_100);
+            LowPower_Idle();
+            // LowPower_Sleep(RB_PWR_RAM2K | RB_PWR_RAM30K | RB_PWR_EXTEND);
+            // HSECFG_Current(HSE_RCur_100);
         }
 
         configPOST_SLEEP_PROCESSING(xExpectedIdleTime);
