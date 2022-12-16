@@ -22,13 +22,6 @@ void vApplicationIdleHook(void);
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationTickHook(void);
 
-/* Prepare hardware to run the demo. */
-static void prvSetupHardware(void);
-
-/* Send a message to the UART initialised in prvSetupHardware. */
-void vSendString(const char *const pcString);
-
-
 static void prvSetupHardware(void)
 {
 #ifdef DEBUG
@@ -49,6 +42,7 @@ static void test1_task(void *pvParameters)
         log_print("Name		  State  Priority  Stack   Number\r\n");
         vTaskList((char *)buf);
         log_print("%s", buf);
+        DelayMs(5);
         vTaskDelay((TickType_t)300 / portTICK_PERIOD_MS);
     }
 }
@@ -58,6 +52,7 @@ static void test2_task(void *pvParameters)
     while (1) {
         log_print("task2\n");
         log_print("free: %d\n", xPortGetFreeHeapSize());
+        DelayMs(5);
         vTaskDelay((TickType_t)1000 / portTICK_PERIOD_MS);
     }
 }
@@ -116,21 +111,6 @@ void vApplicationMallocFailedHook(void)
 }
 /*-----------------------------------------------------------*/
 
-void vApplicationIdleHook(void)
-{
-    /* vApplicationIdleHook() will only be called if configUSE_IDLE_HOOK is set
-    to 1 in FreeRTOSConfig.h.  It will be called on each iteration of the idle
-    task.  It is essential that code added to this hook function never attempts
-    to block in any way (for example, call xQueueReceive() with a block time
-    specified, or call vTaskDelay()).  If the application makes use of the
-    vTaskDelete() API function (as this demo application does) then it is also
-    important that vApplicationIdleHook() is permitted to return to its calling
-    function, because it is the responsibility of the idle task to clean up
-    memory allocated by the kernel to any task that has since been deleted. */
-    log_print("idle\n");
-}
-/*-----------------------------------------------------------*/
-
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 {
 	( void ) pcTaskName;
@@ -142,7 +122,6 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 
 	/* Force an assert. */
     configASSERT_MSG(( volatile void * ) NULL, "task name: %s", pcTaskName);
-	configASSERT( ( volatile void * ) NULL );
 }
 /*-----------------------------------------------------------*/
 
@@ -173,7 +152,8 @@ void vPortSetupTimerInterrupt(void)
     PFIC_SetPriority(SysTick_IRQn, configKERNEL_INTERRUPT_PRIORITY - 1);
 }
 
-void SystemIrqHandler(uint32_t mcause)
+__HIGH_CODE
+static inline void irq_handle(uint32_t mcause)
 {
     uint32_t ulInterruptNumber;
     typedef void (*irq_handler_t)(void);
@@ -183,6 +163,11 @@ void SystemIrqHandler(uint32_t mcause)
 
     /* Now call the real irq handler for ulInterruptNumber */
     isrTable[ulInterruptNumber]();
+}
+
+void SystemIrqHandler(uint32_t mcause)
+{   
+    irq_handle(mcause);
 }
 
 void SysTick_Handler(void)
