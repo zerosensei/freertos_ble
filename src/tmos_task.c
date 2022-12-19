@@ -14,7 +14,7 @@
 #define TMOS_TASK_PRIO  (configMAX_PRIORITIES - 1)
 
 TaskHandle_t tmos_handle;
-uint32_t ble_task_rtc_trig = 0;
+uint32_t tmos_task_trig = 0;
 
 __attribute__((aligned(4))) uint8_t MEM_BUF[BLE_MEMHEAP_SIZE];
 
@@ -64,16 +64,11 @@ uint32_t tmos_idle(uint32_t time)
         return 2;
     }
 
-    ble_task_rtc_trig = time;
-    RTC_SetTignTime(time);
+    tmos_task_trig = time;
     SYS_RecoverIrq(irq_status);
 
-    // suspend ble task
-    if (!RTCTigFlag) {
-        vTaskSuspend(tmos_handle);
-    } else {
-        return 3;
-    }
+    vTaskSuspend(tmos_handle);
+
 #endif
     return 0;
 }

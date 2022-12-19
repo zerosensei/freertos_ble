@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-extern uint32_t ble_task_rtc_trig;
+extern uint32_t tmos_task_trig;
 extern TaskHandle_t tmos_handle;
 
 void tmos_task_init(void);

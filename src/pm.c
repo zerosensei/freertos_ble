@@ -98,16 +98,14 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         configPRE_SLEEP_PROCESSING(xModifiableIdleTime);
 
-        static uint32_t next_rtc_trig  = 0;
-        static uint32_t curr_rtc_count = 0;
+        uint32_t curr_rtc_count = RTC_GetCycle32k();
+        extern uint32_t tmos_task_trig;
+        uint32_t free_rtos_trig = curr_rtc_count + MS_TO_RTC(xExpectedIdleTime * (configTICK_RATE_HZ / 1000));
 
-        next_rtc_trig = R32_RTC_TRIG ;
-        next_rtc_trig = next_rtc_trig ? next_rtc_trig : RTC_TIMER_MAX_VALUE;
-        curr_rtc_count = RTC_GetCycle32k();
+        tmos_task_trig = tmos_task_trig ? tmos_task_trig : RTC_TIMER_MAX_VALUE;
 
         /* Determine the FreeRTOS xExpectedIdleTime and TMOS which comes first */
-        uint32_t expected_rtc_trig = MIN(curr_rtc_count +
-             MS_TO_RTC(xExpectedIdleTime * (configTICK_RATE_HZ / 1000)), next_rtc_trig);
+        uint32_t expected_rtc_trig = MIN(tmos_task_trig, free_rtos_trig);
 
         /* FreeRTOS is in idle, but TMOS is about to start work, 
          * determine whether the minimum sleep time of TMOS is met */
@@ -130,10 +128,8 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
             return;
         }
 
-        extern uint32_t ble_task_rtc_trig;
-
         /* This is TMOS trc trig, TMOS should resume when wakeup */
-        if (expected_rtc_trig == ble_task_rtc_trig) {
+        if (expected_rtc_trig == tmos_task_trig) {
             ble_task_flag = TRUE;
         }
 
@@ -158,13 +154,14 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         uint32_t wake_rtc_count = RTC_GetCycle32k();
 
-        /* wakeup by others*/
-        if (wake_rtc_count < expected_rtc_trig) {
-            RTC_SetTignTime(expected_rtc_trig);
-        } else {
-            RTC_SetTignTime(MAX(next_rtc_trig, 
-                curr_rtc_count + MS_TO_RTC(xExpectedIdleTime * (configTICK_RATE_HZ / 1000))));
-        }
+        /* wakeup by other wakeup source */
+        // if (wake_rtc_count < expected_rtc_trig) {
+
+        //     RTC_SetTignTime(expected_rtc_trig);
+        // } 
+        // else {
+        //     RTC_SetTignTime(MAX(tmos_task_trig, free_rtos_trig));
+        // }
 
         ulCompleteTickPeriods = RTC_TO_MS(wake_rtc_count - curr_rtc_count) * (1000 / configTICK_RATE_HZ);
            
