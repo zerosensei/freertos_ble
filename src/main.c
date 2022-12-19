@@ -11,8 +11,7 @@
 #include "debug.h"
 #include "tmos_task.h"
 
-
-#define TEST_TASK_PRIO (tskIDLE_PRIORITY + 1)
+SemaphoreHandle_t led_bin = NULL;
 
 /* Prototypes for the standard FreeRTOS callback/hook functions implemented
 within this file.  See https://www.freertos.org/a00016.html */
@@ -33,60 +32,73 @@ static void prvSetupHardware(void)
 #if(defined HAL_SLEEP) && (HAL_SLEEP == TRUE)
     HAL_SleepInit();
 #endif
+    log_init();
 }
 
 static void test1_task(void *pvParameters)
 {
-    uint8_t buf[300];
+    uint8_t buf[200];
 
     while (1) {
-        log_print("task1\n");
-        log_print("Name		  State  Priority  Stack   Number\r\n");
+        LOG_INFO("task1\n");
+        LOG_INFO("Name		  State  Priority  Stack   Number\n");
         vTaskList((char *)buf);
-        log_print("%s", buf);
-        DelayMs(1);
-        vTaskDelay((TickType_t)2000 / portTICK_PERIOD_MS);
+        LOG_INFO("%s", buf);
+        LOG_INFO("free: %ld\n", xPortGetFreeHeapSize());
+        vTaskDelay((TickType_t)1000 / portTICK_PERIOD_MS);
     }
 }
 
-static void test2_task(void *pvParameters)
+static void button_task(void *pvParameters)
 {
-    uint8_t buf[300];
+    GPIOPinRemap(ENABLE, RB_PIN_INTX);
+    GPIOB_SetBits(GPIO_Pin_18); 
+    GPIOB_ModeCfg(GPIO_Pin_18, GPIO_ModeOut_PP_5mA);
+    GPIOB_ModeCfg(GPIO_Pin_22, GPIO_ModeIN_PU);
+    GPIOB_ITModeCfg(GPIO_Pin_22, GPIO_ITMode_FallEdge);
+    PWR_PeriphWakeUpCfg(ENABLE, RB_SLP_GPIO_WAKE, Long_Delay);
+    PFIC_EnableIRQ(GPIO_B_IRQn);
+
+    led_bin = xSemaphoreCreateBinary();
+    configASSERT(led_bin);
 
     while (1) {
-        log_print("task2\n");
-        log_print("Task\t     Abs Time\t     %%Time\n");
-        vTaskGetRunTimeStats((char *) buf);
-        log_print("%s", buf);
-        DelayMs(1);
-        vTaskDelay((TickType_t)1000 / portTICK_PERIOD_MS);
+        xSemaphoreTake(led_bin, portMAX_DELAY);
+        GPIOB_InverseBits(GPIO_Pin_18);
+    }
+}
+
+__HIGH_CODE
+void GPIOB_IRQHandler(void)
+{
+    DelayUs(1400);
+    portBASE_TYPE xHigherPriorityTaskWoken = TRUE;
+
+    if (GPIOB_ReadITFlagBit(GPIO_Pin_22)) {
+        GPIOB_ClearITFlagBit(GPIO_Pin_22);
+        xSemaphoreGiveFromISR(led_bin, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
 
 int main()
 {
     prvSetupHardware();
-
+    tmos_task_init();
+    
     xTaskCreate((TaskFunction_t)test1_task,
                 (const char *)"test1",
                 (uint16_t)(configMINIMAL_STACK_SIZE * 2),
                 (void *)NULL,
-                (UBaseType_t)TEST_TASK_PRIO,
+                (UBaseType_t)(tskIDLE_PRIORITY + 1),
                 NULL);
 
-    xTaskCreate((TaskFunction_t)test2_task,
-                (const char *)"test2",
-                (uint16_t)(configMINIMAL_STACK_SIZE * 2),
+    xTaskCreate((TaskFunction_t)button_task,
+                (const char *)"button",
+                (uint16_t)(configMINIMAL_STACK_SIZE),
                 (void *)NULL,
-                (UBaseType_t)TEST_TASK_PRIO,
+                (UBaseType_t)(tskIDLE_PRIORITY + 2),
                 NULL);
-
-    xTaskCreate((TaskFunction_t)tmos_task,
-                (const char *)"TMOS",
-                (uint16_t)BLE_STK_SIZE,
-                (void *)NULL,
-                (UBaseType_t)TMOS_TASK_PRIO,
-                (TaskHandle_t *)&tmos_handle);
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
@@ -225,7 +237,7 @@ static char *cause_str(uint32_t cause)
 __HIGH_CODE
 void HardFault_Handler(void)
 {
-    PRINT("hard fault:\n");
+    LOG_INFO("hard fault:\n");
 
     uint32_t mcause;
     __asm__ volatile("csrr %0, mcause"
@@ -240,9 +252,9 @@ void HardFault_Handler(void)
                      : "=r"(mepc));
 
     mcause &= 0x1f;
-    PRINT("mcause: %ld, %s\n", mcause, cause_str(mcause));
-    PRINT("mtval: %lx\n", mtval);
-    PRINT("mepc: %lx\n", mepc);
+    LOG_INFO("mcause: %ld, %s\n", mcause, cause_str(mcause));
+    LOG_INFO("mtval: %lx\n", mtval);
+    LOG_INFO("mepc: %lx\n", mepc);
 
     while (1)
         ;

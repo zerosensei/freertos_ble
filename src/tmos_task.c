@@ -10,6 +10,9 @@
 #include "HAL.h"
 #include "peripheral.h"
 
+#define BLE_STK_SIZE   (configMINIMAL_STACK_SIZE * 2)
+#define TMOS_TASK_PRIO  (configMAX_PRIORITIES - 1)
+
 TaskHandle_t tmos_handle;
 uint32_t ble_task_rtc_trig = 0;
 
@@ -85,4 +88,14 @@ void tmos_task(void *pvParameters)
     while (1) {
         TMOS_SystemProcess();
     }
+}
+
+void tmos_task_init(void)
+{
+    xTaskCreate((TaskFunction_t)tmos_task,
+            (const char *)"TMOS",
+            (uint16_t)BLE_STK_SIZE,
+            (void *)NULL,
+            (UBaseType_t)TMOS_TASK_PRIO,
+            (TaskHandle_t *)&tmos_handle);
 }

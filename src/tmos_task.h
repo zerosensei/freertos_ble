@@ -11,13 +11,10 @@
 extern "C" {
 #endif
 
-#define BLE_STK_SIZE   (configMINIMAL_STACK_SIZE * 5)
-#define TMOS_TASK_PRIO  (configMAX_PRIORITIES - 1)
-
 extern uint32_t ble_task_rtc_trig;
 extern TaskHandle_t tmos_handle;
 
-void tmos_task(void *pvParameters);
+void tmos_task_init(void);
 
 #ifdef __cplusplus
 }
