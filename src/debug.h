@@ -10,14 +10,14 @@
 #include <stdio.h>
 
 void log_debug( const char *file, const long line, const char *format, ... );
-void log_info( const char *format, ... );
 void log_print( const char *format, ... );
+void log_init(void);
 
 
 #if (defined LOG)
 #define LOG_DEBUG(...) log_debug(__FILE__, __LINE__, __VA_ARGS__)
 
-#define LOG_INFO(...)  log_info(__VA_ARGS__)
+#define LOG_INFO(...)  log_print(__VA_ARGS__)
 
 #define LOG_ASSERT(EXPR)                                                       \
 if (!(EXPR))                                                                  \
