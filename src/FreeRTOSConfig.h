@@ -86,8 +86,6 @@
  *----------------------------------------------------------*/
 
 /* See https://www.freertos.org/Using-FreeRTOS-on-RISC-V.html */
-// #define configMTIME_BASE_ADDRESS 	( 0xE000F000+0x08 )
-// #define configMTIMECMP_BASE_ADDRESS ( 0xE000F000+0x10 )
 #define configMTIME_BASE_ADDRESS       (0)
 #define configMTIMECMP_BASE_ADDRESS    (0)
 

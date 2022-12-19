@@ -60,7 +60,6 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
      * is accounted for as best it can be, but using the tickless mode will
      * inevitably result in some tiny drift of the time maintained by the
      * kernel with respect to calendar time. */
-    // portNVIC_SYSTICK_CTRL_REG &= ~portNVIC_SYSTICK_ENABLE_BIT;
     SysTick->CTLR &= ~SysTick_CTLR_STE;
 
     /* Calculate the reload value required to wait xExpectedIdleTime
@@ -74,7 +73,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
     /* Enter a critical section but don't use the taskENTER_CRITICAL()
      * method as that will mask interrupts that should exit sleep mode. */
-    PFIC_DisableAllIRQ();
+    portDISABLE_INTERRUPTS();
 
     /* If a context switch is pending or a task is waiting for the scheduler
      * to be unsuspended then abandon the low power entry. */
@@ -88,7 +87,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         /* Re-enable interrupts - see comments above the cpsid instruction()
          * above. */
-        PFIC_EnableAllIRQ();
+		portENABLE_INTERRUPTS();
     } else {
         /* Sleep until something happens.  configPRE_SLEEP_PROCESSING() can
          * set its parameter to 0 to indicate that its implementation contains
@@ -112,7 +111,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         /* FreeRTOS is in idle, but TMOS is about to start work, 
          * determine whether the minimum sleep time of TMOS is met */
-        if (expected_rtc_trig <= (curr_rtc_count + WAKE_UP_RTC_MAX_TIME + US_TO_RTC(100))) {
+        if (expected_rtc_trig <= (curr_rtc_count + US_TO_RTC(200))) {
             /* Reset the reload register to the value required for normal tick
              * periods. */
             SysTick->CMP = ulTimerCountsForOneTick - 1UL;
@@ -120,13 +119,13 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
             /* Restart SysTick. */
             SysTick->CTLR |= SysTick_CTLR_STE;
 
+            /* Re-enable interrupts - see comments above the cpsid instruction()
+            * above. */
+            portENABLE_INTERRUPTS();
+
             /* The expected tring must be TMOS rtc Trig, should switch to TMOS task */
             extern TaskHandle_t tmos_handle;
             xTaskResumeFromISR(tmos_handle);
-
-            /* Re-enable interrupts - see comments above the cpsid instruction()
-            * above. */
-            PFIC_EnableAllIRQ();
 
             return;
         }
@@ -141,7 +140,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
         RTC_SetTignTime(expected_rtc_trig);
 
         /* Enable interrupts to wakeup */
-        PFIC_EnableAllIRQ();
+        portENABLE_INTERRUPTS();
 
         if (xModifiableIdleTime > 0) {
             // LowPower_Idle();
@@ -155,7 +154,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
          * and interrupts that execute while the clock is stopped will increase
          * any slippage between the time maintained by the RTOS and calendar
          * time. */
-        PFIC_DisableAllIRQ();
+        portDISABLE_INTERRUPTS();
 
         ulCompleteTickPeriods = RTC_TO_MS(RTC_GetCycle32k() - curr_rtc_count) * (1000 / configTICK_RATE_HZ);
         RTC_SetTignTime(MAX(next_rtc_trig, 
@@ -165,12 +164,16 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
          * again, then set portNVIC_SYSTICK_LOAD_REG back to its standard
          * value. */
         SysTick->CMP = 0UL;
-        SysTick->CTLR |= SysTick_CTLR_STE;
+        SysTick->CTLR = SysTick_CTLR_INIT |
+                        SysTick_CTLR_STRE |
+                        SysTick_CTLR_STCLK |
+                        SysTick_CTLR_STIE |
+                        SysTick_CTLR_STE;
         vTaskStepTick(ulCompleteTickPeriods);
         SysTick->CMP = ulTimerCountsForOneTick - 1UL;
 
         /* Exit with interrpts enabled. */
-        PFIC_EnableAllIRQ();
+        portENABLE_INTERRUPTS();
     }
 }
 

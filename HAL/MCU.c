@@ -87,8 +87,6 @@ void CH58X_BLEInit(void)
         PRINT("head file error...\n");
         while(1);
     }
-    // SysTick_Config(SysTick_LOAD_RELOAD_Msk);
-    // PFIC_DisableIRQ(SysTick_IRQn);
 
     tmos_memset(&cfg, 0, sizeof(bleConfig_t));
     cfg.MEMAddr = (uint32_t)MEM_BUF;
@@ -217,9 +215,7 @@ void HAL_Init()
 {
     halTaskID = TMOS_ProcessEventRegister(HAL_ProcessEvent);
     TMOS_TimerInit(0);
-#if(defined HAL_SLEEP) && (HAL_SLEEP == TRUE)
-    HAL_SleepInit();
-#endif
+
 #if(defined HAL_LED) && (HAL_LED == TRUE)
     HAL_LedInit();
 #endif

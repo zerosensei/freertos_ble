@@ -31,6 +31,9 @@ static void prvSetupHardware(void)
 #endif
 
     HAL_TimeInit();
+#if(defined HAL_SLEEP) && (HAL_SLEEP == TRUE)
+    HAL_SleepInit();
+#endif
 }
 
 static void test1_task(void *pvParameters)
@@ -42,8 +45,8 @@ static void test1_task(void *pvParameters)
         log_print("Name		  State  Priority  Stack   Number\r\n");
         vTaskList((char *)buf);
         log_print("%s", buf);
-        DelayMs(5);
-        vTaskDelay((TickType_t)300 / portTICK_PERIOD_MS);
+        DelayMs(1);
+        vTaskDelay((TickType_t)100 / portTICK_PERIOD_MS);
     }
 }
 
@@ -52,9 +55,34 @@ static void test2_task(void *pvParameters)
     while (1) {
         log_print("task2\n");
         log_print("free: %d\n", xPortGetFreeHeapSize());
-        DelayMs(5);
-        vTaskDelay((TickType_t)1000 / portTICK_PERIOD_MS);
+        DelayMs(1);
+        vTaskDelay((TickType_t)300 / portTICK_PERIOD_MS);
     }
+}
+
+__HIGH_CODE
+void WDOG_BAT_IRQHandler(void)
+{
+    PRINT("watch dog\n");
+    uint32_t mcause;
+    __asm__ volatile("csrr %0, mcause"
+                     : "=r"(mcause));
+
+    uint32_t mtval;
+    __asm__ volatile("csrr %0, mtval"
+                     : "=r"(mtval));
+
+    uint32_t mepc;
+    __asm__ volatile("csrr %0, mepc"
+                     : "=r"(mepc));
+
+    mcause &= 0x1f;
+    // PRINT("mcause: %ld, %s\n", mcause, cause_str(mcause));
+    PRINT("mtval: %lx\n", mtval);
+    PRINT("mepc: %lx\n", mepc);
+
+    while (1)
+        ;   
 }
 
 int main()
@@ -159,7 +187,7 @@ static inline void irq_handle(uint32_t mcause)
     typedef void (*irq_handler_t)(void);
     extern const irq_handler_t isrTable[];
 
-    ulInterruptNumber = mcause & 0x1FUL;
+    ulInterruptNumber = mcause & 0x3FUL;
 
     /* Now call the real irq handler for ulInterruptNumber */
     isrTable[ulInterruptNumber]();
@@ -170,6 +198,7 @@ void SystemIrqHandler(uint32_t mcause)
     irq_handle(mcause);
 }
 
+__HIGH_CODE
 void SysTick_Handler(void)
 {
     /* vPortSetupTimerInterrupt() uses SysTick to generate the tick .+. */
