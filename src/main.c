@@ -14,7 +14,6 @@
 
 #define TEST_TASK_PRIO (tskIDLE_PRIORITY + 1)
 
-
 /* Prototypes for the standard FreeRTOS callback/hook functions implemented
 within this file.  See https://www.freertos.org/a00016.html */
 void vApplicationMallocFailedHook(void);
@@ -46,43 +45,22 @@ static void test1_task(void *pvParameters)
         vTaskList((char *)buf);
         log_print("%s", buf);
         DelayMs(1);
-        vTaskDelay((TickType_t)100 / portTICK_PERIOD_MS);
+        vTaskDelay((TickType_t)2000 / portTICK_PERIOD_MS);
     }
 }
 
 static void test2_task(void *pvParameters)
 {
+    uint8_t buf[300];
+
     while (1) {
         log_print("task2\n");
-        log_print("free: %d\n", xPortGetFreeHeapSize());
+        log_print("Task\t     Abs Time\t     %%Time\n");
+        vTaskGetRunTimeStats((char *) buf);
+        log_print("%s", buf);
         DelayMs(1);
-        vTaskDelay((TickType_t)300 / portTICK_PERIOD_MS);
+        vTaskDelay((TickType_t)1000 / portTICK_PERIOD_MS);
     }
-}
-
-__HIGH_CODE
-void WDOG_BAT_IRQHandler(void)
-{
-    PRINT("watch dog\n");
-    uint32_t mcause;
-    __asm__ volatile("csrr %0, mcause"
-                     : "=r"(mcause));
-
-    uint32_t mtval;
-    __asm__ volatile("csrr %0, mtval"
-                     : "=r"(mtval));
-
-    uint32_t mepc;
-    __asm__ volatile("csrr %0, mepc"
-                     : "=r"(mepc));
-
-    mcause &= 0x1f;
-    // PRINT("mcause: %ld, %s\n", mcause, cause_str(mcause));
-    PRINT("mtval: %lx\n", mtval);
-    PRINT("mepc: %lx\n", mepc);
-
-    while (1)
-        ;   
 }
 
 int main()

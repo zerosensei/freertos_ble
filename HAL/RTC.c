@@ -82,6 +82,7 @@ void HAL_TimeInit(void)
     sys_safe_access_disable();
 #endif
     RTC_InitTime(2020, 1, 1, 0, 0, 0); //RTC时钟初始化当前时间
+    PFIC_EnableIRQ(RTC_IRQn);
 }
 
 /******************************** endfile @ time ******************************/

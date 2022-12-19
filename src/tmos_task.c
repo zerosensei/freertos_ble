@@ -22,11 +22,13 @@ __HIGH_CODE
 void RTC_IRQHandler(void)
 {
     extern uint8_t ble_task_flag;
- 
+
     R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
     RTCTigFlag = 1;
 
+#if (configUSE_TICKLESS_IDLE == 1)
     if (ble_task_flag) 
+#endif
     {
         ble_task_flag = FALSE;
 
