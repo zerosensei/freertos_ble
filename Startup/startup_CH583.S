@@ -15,8 +15,6 @@ _start:
 
  	jal x0, freertos_risc_v_trap_handler
 
-	# .section .startup
-
 /* Reset Handler */
 Reset_Handler:
 .option push
