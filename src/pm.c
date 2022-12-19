@@ -156,10 +156,18 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
          * time. */
         portDISABLE_INTERRUPTS();
 
-        ulCompleteTickPeriods = RTC_TO_MS(RTC_GetCycle32k() - curr_rtc_count) * (1000 / configTICK_RATE_HZ);
-        RTC_SetTignTime(MAX(next_rtc_trig, 
-            curr_rtc_count + MS_TO_RTC(xExpectedIdleTime * (configTICK_RATE_HZ / 1000))));
-            
+        uint32_t wake_rtc_count = RTC_GetCycle32k();
+
+        /* wakeup by others*/
+        if (wake_rtc_count < expected_rtc_trig) {
+            RTC_SetTignTime(expected_rtc_trig);
+        } else {
+            RTC_SetTignTime(MAX(next_rtc_trig, 
+                curr_rtc_count + MS_TO_RTC(xExpectedIdleTime * (configTICK_RATE_HZ / 1000))));
+        }
+
+        ulCompleteTickPeriods = RTC_TO_MS(wake_rtc_count - curr_rtc_count) * (1000 / configTICK_RATE_HZ);
+           
         /* Restart SysTick so it runs from portNVIC_SYSTICK_LOAD_REG
          * again, then set portNVIC_SYSTICK_LOAD_REG back to its standard
          * value. */
