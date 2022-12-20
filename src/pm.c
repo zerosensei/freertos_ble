@@ -35,8 +35,6 @@ static uint32_t ulTimerCountsForOneTick = configSYSTICK_CLOCK_HZ / configTICK_RA
 static uint32_t ulStoppedTimerCompensation = portMISSED_COUNTS_FACTOR / (configCPU_CLOCK_HZ / configSYSTICK_CLOCK_HZ);
 #endif /* configUSE_TICKLESS_IDLE */
 
-uint8_t tmos_task_flag = FALSE;
-
 
 /*-----------------------------------------------------------*/
 
@@ -128,11 +126,6 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
             return;
         }
 
-        /* This is TMOS trc trig, TMOS should resume when wakeup */
-        if (expected_rtc_trig == tmos_task_trig) {
-            tmos_task_flag = TRUE;
-        }
-
         RTC_SetTignTime(expected_rtc_trig);
 
         /* Enable interrupts to wakeup */
@@ -154,15 +147,11 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         uint32_t wake_rtc_count = RTC_GetCycle32k();
 
-        /* Make TMOS preempt FreeRTOS */
+        /* Trig RTC interrupt, make TMOS preempt FreeRTOS */
         if (wake_rtc_count < (expected_rtc_trig + 2UL)) {
             RTC_SetTignTime(expected_rtc_trig);
         } else {
             RTC_SetTignTime(MAX(tmos_task_trig, free_rtos_trig));
-
-            if (MAX(tmos_task_trig, free_rtos_trig) == tmos_task_trig) {
-                tmos_task_flag = TRUE;
-            }
         }
 
         ulCompleteTickPeriods = RTC_TO_MS(wake_rtc_count - curr_rtc_count) * (1000 / configTICK_RATE_HZ);

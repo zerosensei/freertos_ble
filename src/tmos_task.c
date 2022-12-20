@@ -14,30 +14,21 @@
 #define TMOS_TASK_PRIO  (configMAX_PRIORITIES - 1)
 
 TaskHandle_t tmos_handle;
-uint32_t tmos_task_trig = 0;
 
+#if (configUSE_TICKLESS_IDLE == 1)
+uint32_t tmos_task_trig = 0;
+#endif
 __attribute__((aligned(4))) uint8_t MEM_BUF[BLE_MEMHEAP_SIZE];
 
 extern void SysTick_Handler(void);
 
-
 __HIGH_CODE
 void RTC_IRQHandler(void)
 {
-    extern uint8_t tmos_task_flag;
-
     R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
-    RTCTigFlag = 1;
 
-#if (configUSE_TICKLESS_IDLE == 1)
-    if (tmos_task_flag) 
-#endif
-    {
-        tmos_task_flag = FALSE;
-
-        xTaskResumeFromISR(tmos_handle);
-        portYIELD_FROM_ISR(TRUE);
-    }
+    xTaskResumeFromISR(tmos_handle);
+    portYIELD_FROM_ISR(TRUE);
 
     SysTick_Handler();
 }
@@ -63,8 +54,10 @@ uint32_t tmos_idle(uint32_t time)
         SYS_RecoverIrq(irq_status);
         return 2;
     }
-
+#if (configUSE_TICKLESS_IDLE == 1)
     tmos_task_trig = time;
+#endif
+    RTC_SetTignTime(time);
     SYS_RecoverIrq(irq_status);
 
     vTaskSuspend(tmos_handle);
