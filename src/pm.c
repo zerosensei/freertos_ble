@@ -134,6 +134,7 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
         if (xModifiableIdleTime > 0) {
             // LowPower_Idle();
             LowPower_Sleep(RB_PWR_RAM2K | RB_PWR_RAM30K | RB_PWR_EXTEND);
+            //TODO: wait HSE stable
             HSECFG_Current(HSE_RCur_100);
         }
 
@@ -146,13 +147,6 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
         portDISABLE_INTERRUPTS();
 
         uint32_t wake_rtc_count = RTC_GetCycle32k();
-
-        /* Trig RTC interrupt, make TMOS preempt FreeRTOS */
-        if (wake_rtc_count < (expected_rtc_trig + 2UL)) {
-            RTC_SetTignTime(expected_rtc_trig);
-        } else {
-            RTC_SetTignTime(MAX(tmos_task_trig, free_rtos_trig));
-        }
 
         ulCompleteTickPeriods = RTC_TO_MS(wake_rtc_count - curr_rtc_count) * (1000 / configTICK_RATE_HZ);
            
@@ -167,6 +161,10 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
                         SysTick_CTLR_STE;
         vTaskStepTick(ulCompleteTickPeriods);
         SysTick->CMP = ulTimerCountsForOneTick - 1UL;
+
+        /* Resume TMOS, make TMOS preemt FreeRTOS */
+        extern TaskHandle_t tmos_handle;
+        xTaskResumeFromISR(tmos_handle);
 
         /* Exit with interrpts enabled. */
         portENABLE_INTERRUPTS();

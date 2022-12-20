@@ -54,6 +54,7 @@ uint32_t tmos_idle(uint32_t time)
         SYS_RecoverIrq(irq_status);
         return 2;
     }
+
 #if (configUSE_TICKLESS_IDLE == 1)
     tmos_task_trig = time;
 #endif
