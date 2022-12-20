@@ -24,16 +24,16 @@ extern void SysTick_Handler(void);
 __HIGH_CODE
 void RTC_IRQHandler(void)
 {
-    extern uint8_t ble_task_flag;
+    extern uint8_t tmos_task_flag;
 
     R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
     RTCTigFlag = 1;
 
 #if (configUSE_TICKLESS_IDLE == 1)
-    if (ble_task_flag) 
+    if (tmos_task_flag) 
 #endif
     {
-        ble_task_flag = FALSE;
+        tmos_task_flag = FALSE;
 
         xTaskResumeFromISR(tmos_handle);
         portYIELD_FROM_ISR(TRUE);
