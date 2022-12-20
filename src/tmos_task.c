@@ -13,7 +13,7 @@
 #define BLE_STK_SIZE   (configMINIMAL_STACK_SIZE * 2)
 #define TMOS_TASK_PRIO  (configMAX_PRIORITIES - 1)
 
-TaskHandle_t tmos_handle;
+TaskHandle_t tmos_handle = NULL;
 
 #if (configUSE_TICKLESS_IDLE == 1)
 uint32_t tmos_task_trig = 0;
@@ -27,8 +27,10 @@ void RTC_IRQHandler(void)
 {
     R8_RTC_FLAG_CTRL = (RB_RTC_TMR_CLR | RB_RTC_TRIG_CLR);
 
-    xTaskResumeFromISR(tmos_handle);
-    portYIELD_FROM_ISR(TRUE);
+    if (tmos_handle) {
+        xTaskResumeFromISR(tmos_handle);
+        portYIELD_FROM_ISR(TRUE);
+    }
 
     SysTick_Handler();
 }

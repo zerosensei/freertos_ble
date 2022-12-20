@@ -121,7 +121,9 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
             /* The expected tring must be TMOS rtc Trig, should switch to TMOS task */
             extern TaskHandle_t tmos_handle;
-            xTaskResumeFromISR(tmos_handle);
+            if (tmos_handle) {
+                xTaskResumeFromISR(tmos_handle);
+            }
 
             return;
         }
@@ -164,7 +166,9 @@ void vPortSuppressTicksAndSleep(TickType_t xExpectedIdleTime)
 
         /* Resume TMOS, make TMOS preemt FreeRTOS */
         extern TaskHandle_t tmos_handle;
-        xTaskResumeFromISR(tmos_handle);
+        if (tmos_handle) {
+            xTaskResumeFromISR(tmos_handle);
+        }
 
         /* Exit with interrpts enabled. */
         portENABLE_INTERRUPTS();
