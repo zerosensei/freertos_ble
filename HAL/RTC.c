@@ -24,7 +24,6 @@
 /***************************************************
  * Global variables
  */
-volatile uint32_t RTCTigFlag;
 
 /*******************************************************************************
  * @fn      RTC_SetTignTime
@@ -44,7 +43,6 @@ void RTC_SetTignTime(uint32_t time)
     sys_safe_access_enable();
     R32_RTC_TRIG = time;
     sys_safe_access_disable();
-    RTCTigFlag = 0;
 }
 
 /*******************************************************************************

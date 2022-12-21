@@ -71,7 +71,6 @@ static void button_task(void *pvParameters)
 __HIGH_CODE
 void GPIOB_IRQHandler(void)
 {
-    DelayUs(1400);
     portBASE_TYPE xHigherPriorityTaskWoken = TRUE;
 
     if (GPIOB_ReadITFlagBit(GPIO_Pin_22)) {
